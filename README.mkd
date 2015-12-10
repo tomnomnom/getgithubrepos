@@ -2,6 +2,8 @@
 
 A tool to list the SSH clone URLs for the given GitHub user.
 
+It doesn't use auth so beware of [rate limits](https://developer.github.com/v3/#rate-limiting).
+
 ## Install
 
 	▶ go get github.com/tomnomnom/getgithubrepos

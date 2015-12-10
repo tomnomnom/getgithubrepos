@@ -12,13 +12,7 @@ import (
 	"github.com/tomnomnom/linkheader"
 )
 
-type repo struct {
-	Id     int    `json:"id"`
-	Name   string `json:"name"`
-	SSHUrl string `json:"ssh_url"`
-}
-
-// repoError is a special error type that includes and exit code
+// repoError is a special error type that includes an exit code
 type repoError struct {
 	error
 	code int
@@ -30,6 +24,15 @@ var errBadUsername = &repoError{errors.New("No such username"), 2}
 var errRateLimitExceeded = &repoError{errors.New("Rate limit exceeded"), 3}
 var errHTTPFail = &repoError{errors.New("HTTP Error"), 4}
 var errJSONDecode = &repoError{errors.New("Failed to decode JSON response"), 5}
+
+// handleError takes appropriate action for the provided error
+func handleError(err *repoError) {
+	if err == nil {
+		return
+	}
+	fmt.Println(err.Error())
+	os.Exit(err.code)
+}
 
 func main() {
 	flag.Parse()
@@ -61,13 +64,11 @@ func main() {
 	}
 }
 
-// handleError takes appropriate action for the provided error
-func handleError(err *repoError) {
-	if err == nil {
-		return
-	}
-	fmt.Println(err.Error())
-	os.Exit(err.code)
+// repo is a struct to unmarshal the JSON response in to
+type repo struct {
+	Id     int    `json:"id"`
+	Name   string `json:"name"`
+	SSHUrl string `json:"ssh_url"`
 }
 
 // getRepos gets the repositories from a GitHub API URL
