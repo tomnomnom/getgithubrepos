@@ -2,11 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
+	"os"
 
 	"github.com/tomnomnom/linkheader"
 )
@@ -17,13 +18,25 @@ type repo struct {
 	SSHUrl string `json:"ssh_url"`
 }
 
+// repoError is a special error type that includes and exit code
+type repoError struct {
+	error
+	code int
+}
+
+// Error values
+var errNoUsername = &repoError{errors.New("Usage: getgithubrepos <username>"), 1}
+var errBadUsername = &repoError{errors.New("No such username"), 2}
+var errRateLimitExceeded = &repoError{errors.New("Rate limit exceeded"), 3}
+var errHTTPFail = &repoError{errors.New("HTTP Error"), 4}
+var errJSONDecode = &repoError{errors.New("Failed to decode JSON response"), 5}
+
 func main() {
 	flag.Parse()
 
 	user := flag.Arg(0)
 	if user == "" {
-		fmt.Println("Usage: getgithubrepos <username>")
-		return
+		handleError(errNoUsername)
 	}
 
 	url := fmt.Sprintf("https://api.github.com/users/%s/repos", user)
@@ -38,10 +51,7 @@ func main() {
 
 	for r.url != "" {
 		fetched, nextUrl, err := getRepos(r.url)
-		if err != nil {
-			log.Fatal(err)
-			break
-		}
+		handleError(err)
 		r.repos = append(r.repos, fetched...)
 		r.url = nextUrl
 	}
@@ -51,26 +61,47 @@ func main() {
 	}
 }
 
+// handleError takes appropriate action for the provided error
+func handleError(err *repoError) {
+	if err == nil {
+		return
+	}
+	fmt.Println(err.Error())
+	os.Exit(err.code)
+}
+
 // getRepos gets the repositories from a GitHub API URL
 // e.g. https://api.github.com/users/tomnomnom/repos
-// and also returns the URL for the next page of results (if any)
-func getRepos(url string) (repos []repo, next string, err error) {
+// also returns the URL for the next page of results (if any)
+// and any error that occurred
+func getRepos(url string) ([]repo, string, *repoError) {
+
+	repos := make([]repo, 0)
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return repos, "", err
+		return repos, "", errHTTPFail
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
 
-	next = ""
-	if links, exists := resp.Header["Link"]; exists {
-		next = getNext(links)
+	// Check for 'expected' errors
+	switch resp.StatusCode {
+	case http.StatusNotFound:
+		return repos, "", errBadUsername
+	case http.StatusForbidden:
+		return repos, "", errRateLimitExceeded
 	}
 
+	body, err := ioutil.ReadAll(resp.Body)
 	err = json.Unmarshal(body, &repos)
 	if err != nil {
-		return repos, "", err
+		return repos, "", errJSONDecode
+	}
+
+	// Check for a link to the next page
+	next := ""
+	if links, exists := resp.Header["Link"]; exists {
+		next = getNext(links)
 	}
 
 	return repos, next, nil
