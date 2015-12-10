@@ -1,0 +1,17 @@
+# getgithubrepos
+
+A tool to list the SSH clone URLs for the given GitHub user.
+
+## Install
+
+	▶ go get github.com/tomnomnom/getgithubrepos
+
+## Usage
+	
+	▶ getgithubrepos tomnomnom
+	git@github.com:TomNomNom/All-About-SPL.git
+	git@github.com:TomNomNom/api.tomnomnom.com.git
+	git@github.com:TomNomNom/ASCIIPoint.git
+	git@github.com:TomNomNom/branchdemo.git
+	...
+
