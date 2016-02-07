@@ -53,10 +53,10 @@ func main() {
 	}
 
 	for r.url != "" {
-		fetched, nextUrl, err := getRepos(r.url)
+		fetched, nextURL, err := getRepos(r.url)
 		handleError(err)
 		r.repos = append(r.repos, fetched...)
-		r.url = nextUrl
+		r.url = nextURL
 	}
 
 	for _, i := range r.repos {
@@ -66,7 +66,7 @@ func main() {
 
 // repo is a struct to unmarshal the JSON response in to
 type repo struct {
-	Id     int    `json:"id"`
+	ID     int    `json:"id"`
 	Name   string `json:"name"`
 	SSHUrl string `json:"ssh_url"`
 }
@@ -77,7 +77,7 @@ type repo struct {
 // and any error that occurred
 func getRepos(url string) ([]repo, string, *repoError) {
 
-	repos := make([]repo, 0)
+	var repos []repo
 
 	resp, err := http.Get(url)
 	if err != nil {
